@@ -22,6 +22,7 @@ def load_data(file_path):
             "text": tweet.get("text", ""),
             "retweets": tweet.get("retweets", 0),
             "likes": tweet.get("likes", 0),
+            "quotes": tweet.get("quotes", 0),
         })
     return pd.DataFrame(tweets)
 
@@ -47,7 +48,7 @@ def is_valid_text(text):
     :return: True if the text is valid, False otherwise.
     """
     # Remove tweets with unsupported or garbled text (e.g., non-English scripts or gibberish)
-    if re.search(r'[à¦]|[\u0980-\u09FF]|[\u0900-\u097F]|[\u0600-\u06FF]', text):  # Garbled text pattern and Bengali, Hindi, Urdu text
+    if re.search(r'^[“ð]|[ð]|[à¦]|[\u0980-\u09FF]|[\u0900-\u097F]|[\u0600-\u06FF]|[“ð]$', text):  # Garbled text pattern and Bengali, Hindi, Urdu text
         return False
     # Remove tweets with less than 30 characters
     if len(text) < 30:
@@ -64,9 +65,15 @@ def preprocess_data(input_path, output_path):
     data = load_data(input_path)
     print(f"Loaded {len(data)} tweets.")
 
-    # Drop rows where 'text' is empty
+    # Drop rows if any row is empty
     data = data[data['text'].notnull()]
-    print(f"After removing empty text rows: {len(data)} tweets.")
+    data = data[data["id"].notnull()]
+    data = data[data["timestamp"].notnull()]
+    data = data[data["username"].notnull()]
+    data = data[data["retweets"].notnull()]
+    data = data[data["likes"].notnull()]
+    data = data[data["quotes"].notnull()]
+    print(f"After removing empty rows: {len(data)} tweets.")
 
     # Clean tweet text
     data['cleaned_text'] = data['text'].apply(clean_text)
@@ -75,15 +82,26 @@ def preprocess_data(input_path, output_path):
     data = data[data['cleaned_text'].apply(is_valid_text)]
     print(f"After filtering invalid tweets: {len(data)} tweets.")
 
+    # Convert the timestamp column to datetime
+    data['timestamp'] = pd.to_datetime(data['timestamp'])
+
+    # Define the timestamp range
+    start_date = '2024-01-15T05:46:00.000Z'
+    end_date = '2024-09-15T05:46:00.000Z'
+
+    # Filter the tweets based on the timestamp range
+    filtered_data = data[(data['timestamp'] >= start_date) & (data['timestamp'] <= end_date)]
+    print(f"After filtering by timestamp: {len(filtered_data)} tweets.")
+
     # Save the processed dataset
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    data.to_csv(output_path, index=False)
+    filtered_data.to_csv(output_path, index=False)
     print(f"Processed data saved to {output_path}")
 
 if __name__ == "__main__":
     # Define file paths
     input_file = "./data/tweets.json"  # Adjust path as needed
-    output_file = "./data/processed_tweets.csv"
+    output_file = "./data/split_processed_tweets.csv"
 
     # Preprocess the data
     preprocess_data(input_file, output_file)
