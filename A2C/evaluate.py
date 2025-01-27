@@ -23,7 +23,7 @@ def evaluate_agent(data_path, save_path='./evaluation_results/'):
 
 
     # Load the trained model
-    model = A2C.load("a2c_tweet_trend_model")
+    model = A2C.load("a2c_tweet_trend_model_3phase")
 
     # Initialize variables for tracking metrics
     total_rewards = []
